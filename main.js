@@ -1,220 +1,289 @@
-const process = require('process');
-const path = require('path')
+//Hi @flesh!
 
-tokens = []
-descs = []
-funs = []
+const process = require('process');
+const path = require('path');
+
+var tokens = {};
+var tokHelp = [];
+var descs = {};
+var funs = {};
 
 //set function vars
-var errorfun
-var ignores = 0 //how many errors to ignore, -1 suppresses all errors
+var errorfun;
+var ignores = 0; //how many errors to ignore, -1 suppresses all errors
+
+//autocorrects tokens
+exports.approx = function(token) {
+	var tokenValue = 0;
+	var temp = '';
+	var addVals = {};
+
+	for (var key2 in dict) {
+		token = token.replace(eval('/' + key2 + '/g'), dict[key2] + '+');
+	}
+	tokenValue = eval(token + '0');
+
+	for (var key in tokens) {
+		temp = tokens[key];
+		for (var key2 in dict) {
+			temp = temp.replace(eval('/' + key2 + '/g'), dict[key2] + '+');
+		}
+
+		addVals[key] = eval(temp + '0');
+	}
+
+	for (var key in addVals) {
+		addVals[key] = Math.abs(tokenValue - addVals[key]);
+	}
+	var items = Object.keys(addVals).map(function(key) {
+		return [ key, addVals[key] ];
+	});
+	console.log(items);
+	return console.log(items.sort((a, b) => a[1] - b[1])[0][0]);
+};
 
 //listify a string input,
 //returns an array
 exports.listify = function(input, array) {
+	var ind = 0; //index
+	var whitespace = false; // current character
 
-  var ind = 0 //index
-  var whitespace = false // current character
+	for (j = 0; j < input.length; j++) {
+		//checks for whitespace and prevents null spaces in the array
+		if (input.charAt(j) === ' ' && whitespace === false) {
+			whitespace = true;
+			ind += 1;
+			continue;
+		}
 
-  for (j = 0; j < input.length; j++) {
+		try {
+			whitespace = false;
+			array[ind] += input.charAt(j);
+		} catch (e) {
+			console.log('\x1b[31m%s\x1b[0m', '[Error]', "Second Argument for 'listify' is missing or isn't an array.");
+		}
 
-    //checks for whitespace and prevents null spaces in the array
-    if (input.charAt(j) === ' ' && whitespace === false) {
+		//replace undefined with nothing
+		array[ind] = array[ind].replace('undefined', '');
+	}
+	return array;
+};
 
-      whitespace = true
-      ind += 1
-      continue
-    }
+exports.stringify = function(array, output) {
+	if (!Array.isArray(array)) {
+		return console.log('\x1b[31m%s\x1b[0m', '[Error]', "First Argument for 'stringify' isn't an array.");
+	}
 
-    try {
+	var str = '';
+	for (j = 0; j < array.length; j++) {
+		for (k = 0; k < array[j].length; k++) {
+			if (k === array[j].length - 1 && j !== array.length - 1) {
+				str += array[j].charAt(k) + ' ';
+			} else {
+				str += array[j].charAt(k);
+			}
+		}
+	}
 
-      whitespace = false
-      array[ind] += input.charAt(j)
-    }
+	return str;
+};
 
-    catch(e) {
-      console.log('\x1b[31m%s\x1b[0m', '[Error]', 'Second Argument for \'listify\' is missing or isn\'t an array.')
-    }
-
-    //replace undefined with nothing
-    array[ind] = array[ind].replace('undefined', '')
-
-  }
-  return array
-}
+//automatically loop through each char.
+exports.forChar = function(input, cb) {
+	if (Array.isArray(input)) {
+		for (index = 0; index < input.length; index++) {
+			for (char = 0; char < input[index].length; char++) {
+				cb(array[ind].charAt(char));
+			}
+		}
+	} else {
+		for (char = 0; char < input[index].length; char++) {
+			cb(array[ind].charAt(char));
+		}
+	}
+};
 
 //Adds a token and a function for the parse method
-exports.add = function(token, fun, description='Description') {
-  var currentToken = ''
-  var whiteSpace = 0 //check for whitespace
+exports.add = function(token, fun, description = 'Description') {
+	var currentToken = '';
+	var helpTok = '';
 
-  for (char = 0; char < (token.length + 1) ; char++) {
+	descs[description] = description;
+	token = token.split(' ');
 
-    if (whiteSpace !== 0) {
-
-      description = ''
-    }
-
-    if (token.charAt(char) !== ' ') {
-
-        currentToken += token.charAt(char)
-    }
-
-    else if (token.charAt(char) === ' ' && currentToken !== '') {
-
-      tokens.push(currentToken)
-      funs.push(fun)
-      descs.push(description)
-      currentToken = ''
-      whiteSpace += 1
-
-      continue
-
-    }
-
-    if (char === token.length) {
-
-      tokens.push(currentToken)
-      funs.push(fun)
-      descs.push(description)
-
-      break
-
-    }
-
-  } //for
-
-  //tokens.push(token)
-  //funs.push(fun)
-  //descs.push(description)
-}
-
+	for (var i = 0; i <= token.length - 1; i++) {
+		tokens[token[i]] = token[i];
+		funs[token[i]] = fun;
+		helpTok[token[i]] += token[i];
+		helpTok[token[i]] += token[i] !== '' && i !== token[i].length - 1 ? ', ' : '';
+	}
+};
 
 //automatic parse, default input is from argv
-exports.parse = function(input='process.argv') {
-  //argv setting
-  var init = 0
+exports.parse = function(input = 'process.argv') {
+	//argv setting
+	var init = 0;
 
-  //workaround to skip the node and filename being processed
-  if (input === 'process.argv') {
-    init = 2
-    input = eval(input)
-  }
-  //automatic listify
-  if (!Array.isArray(input)) {
-    var array = []
-    input = exports.listify(input, array)
-  }
+	//workaround to skip the node and filename being processed
+	if (input === 'process.argv') {
+		init = 2;
+		input = eval(input);
+	}
+	//automatic listify
+	if (!Array.isArray(input)) {
+		var array = [];
+		input = exports.listify(input, array);
+	}
 
-  //i know this is horrible to do but without this the error function will not work.
-  //i will find another way to fix this
-  input.push('')
+	i = init - 1;
 
+	while (i < input.length - 1) {
+		i++;
 
-  var lastInput = ''
-  i = init - 1;
-
-  while (i < input.length) {
-
-    i++
-
-    if (lastInput !== '' && ignores === 0) {
-          errorfun(input[i - 1])  //if the input token is unrecognized it will call the custom global error function
-          break
-    }
-
-    if (ignores !== 0) {
-      ignores -= 1
-    }
-
-    lastInput = input[i]
-
-    for (k = 0; k < tokens.length; k++) {
-
-      if (input[i] === tokens[k]) {
-
-        lastInput = ''
-        try {
-
-          funs[k]()    //call the function
-        }
-
-        catch(e) {
-
-          if (e instanceof TypeError) {
-
-            //only called if the program has a Syntax Error on the add() function
-            console.log('\x1b[31m%s\x1b[0m', '[Error] ', 'The second parameter for \'add\' isn\'t a function.')
-            console.log('Token: ' + tokens[k])
-          }
-        }
-      }
-    }
-  }
-} //parse
+		try {
+			funs[input[i]] ? funs[input[i]](exports.getArgs(input.length - i - 2, false)) : errorfun(input[i]);
+			if (!funs[input[i]]) return 1;
+		} catch (e) {
+			if (e instanceof TypeError) {
+				console.log('\x1b[31m%s\x1b[0m', '[Error]', "The second parameter for 'add' isn't a function.");
+				console.log('Token: ' + tokens[input[i]]);
+				return 1;
+			}
+		}
+	}
+}; //parse
 
 //Adds a custom error function called by parse
 exports.error = function(fun) {
-  errorfun = fun
-}
+	errorfun = fun;
+};
 
 //Adds a custom help function, the help section is
 //generated by the program automatically,
 //use this function if you want to override it.
 
 exports.help = function(fun) {
-  phelp = fun
-}
+	phelp = fun;
+};
 
 exports.ignore = function(n) {
-  ignores = n
-}
+	ignores = n;
+};
 
-exports.skip = function(nu) {
-  i = nu
-}
+exports.skip = function(n) {
+	i = nu;
+};
 
-exports.getArgs = function(num, array) {
-  var p = i
-  var arr = []
-  var ind = 0
+exports.getArgs = function(num, ignoreErrors = true, array = process.argv) {
+	var p = i;
+	var arr = [];
+	var ind = 0;
 
-  exports.ignore(2 + num)
+	if (ignoreErrors) {
+		exports.ignore(2 + num);
+	}
 
-  while (p < (i + num)) {
-    p++
-    arr.push(array[p])
-  }
+	while (p < i + num) {
+		p++;
+		arr.push(array[p]);
+	}
 
-  return arr
-
-}
+	return arr;
+};
 
 //PRIVATE FUNCTIONS
 function phelp() {
-  console.log('Usage: ' + path.basename(__filename) +' <commands>')
-  //bit ugly, but whatever
-  for(k = 0; k < tokens.length; k++) {
-    console.log('\n' + tokens[k] + ':' + (function() {
-      var j = k
-      var len = tokens[j].length
-      j = 0
-      var space = ''
-      for(j; j < 16 - len; ++j) {
-        space += ' '
-      }
+	console.log('Usage: ' + path.basename(__filename) + ' <commands>');
+	//bit ugly, but whatever
+	for (k = 0; k < tokHelp.length; k++) {
+		console.log(
+			'\n' +
+				tokHelp[k] +
+				':' +
+				(function() {
+					var j = k;
+					var len = tokHelp[j].length;
+					j = 0;
+					var space = '';
+					for (j; j < 28 - len; ++j) {
+						space += ' ';
+					}
 
-      return space
-    }()) + '' + descs[k])
-  }
+					return space;
+				})() +
+				'' +
+				descs[k]
+		);
+	}
 }
 
 //Adds a help token
-exports.add('-h --help', () => {
-  phelp()
-}, 'Print this help section.')
+exports.add(
+	'-h --help',
+	() => {
+		phelp();
+	},
+	'Print this help section.'
+);
 
 //sets default overridable error function
 exports.error((token) => {
-  console.log('\x1b[31m%s\x1b[0m', '[Error]', 'Unrecognized token \'' + token + '\'')
-})
+	console.log('\x1b[31m%s\x1b[0m', '[Error]', "Unrecognized token '" + token + "'");
+});
+
+var dict = {
+	' ': 0,
+	'-': 0,
+	q: 1,
+	w: 2,
+	e: 3,
+	r: 4,
+	t: 5,
+	y: 6,
+	u: 7,
+	i: 8,
+	o: 9,
+	p: 10,
+	a: 11,
+	s: 12,
+	d: 13,
+	f: 14,
+	g: 15,
+	h: 16,
+	j: 17,
+	k: 18,
+	l: 19,
+	z: 20,
+	x: 21,
+	c: 22,
+	v: 23,
+	b: 24,
+	n: 25,
+	m: 26,
+	Q: 1,
+	W: 2,
+	E: 3,
+	R: 4,
+	T: 5,
+	Y: 6,
+	U: 7,
+	I: 8,
+	O: 9,
+	P: 10,
+	A: 11,
+	S: 12,
+	D: 13,
+	F: 14,
+	G: 15,
+	H: 16,
+	J: 17,
+	K: 18,
+	L: 19,
+	Z: 20,
+	X: 21,
+	C: 22,
+	V: 23,
+	B: 24,
+	N: 25,
+	M: 26
+};
