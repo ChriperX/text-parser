@@ -1,15 +1,15 @@
-#This is an utility for parsing text.
+# This is an utility for parsing text.
 
-#Docs
+# Docs
 
-#listify()
+# listify()
   Takes a string input and converts it into an array.
 
   First argument: input string
 
   Second argument: output array
 
-#add()
+# add()
   Adds a token and a callback function, throws an error if there isn't a function.
 
   First argument: the token
@@ -18,13 +18,13 @@
 
   Third argument: description for the token
 
-#parse()
+# parse()
   Parses the input and executes the function if the token is present.\
   If it finds an unknown token it calls the error() function (see below).
 
   First argument: the input, default is from argv
 
-#error()
+# error()
   Error function called from parse()
 
   First argument: callback function called on error,
@@ -33,28 +33,28 @@
 
   will use to pass the unknown token
 
-#help()
+# help()
   Function used by user to override the
 
   default help function.
 
   First argument: callback function
 
-#getArgs()
+# getArgs()
   Get arguments from a specified array
 
   First argument: how many arguments to return
 
   Second argument: from what array to get the arguments, default is argv
 
-#ignore()
+# ignore()
   Ignore errors thrown by parse().
 
   First argument: how many errors to ignore.
 
   Putting -1 will suppress all errors
 
-#Changelog
+# Changelog
   - Now the add() function can take multiple tokens
   E.g.:
     parse.add('-f --foo' () => console.log('bar'))
@@ -63,7 +63,7 @@
   - Added help commands
 
 
-#Examples
+# Examples
 ```
 
 const parse = require('@nonamenpm/text-parser')
